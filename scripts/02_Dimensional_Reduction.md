@@ -1,6 +1,81 @@
+```         
+proj = rprojroot::find_rstudio_root_file()
+knitr:: opts_knit$set(root.dir = proj)
+
+knitr::opts_chunk$set(
+    fig.align = "center",
+    message = FALSE,
+    warning = FALSE,
+    dpi = 600
+)
+```
+
 # ***Dimensional Reduction Techniques for Proteomics & Chemometrics: PCA, t-SNE and UMAP***
 
+*Sudipta Hazra*
+
+*Abstract:*
+
+This project is a part of **Food Proteomics Project**. It covers R code for different dimensional reduction techniques like,
+
+1.  Principal Component Analysis (PCA)
+
+2.  t-distributed Stochastic Neighbor Embedding (t-SNE)
+
+3.  Uniform Manifold Approximation and Projection (UMAP)
+
 ## Introduction
+
+### First time running the code,
+
+The structure of the project folder is,
+
+1.  Download the whole project folder,
+
+2.  run a `renv::restore()`,
+
+3.  The folder structure is as below,
+
+```         
+## .
+## ├── data
+## │   └── sample_data.csv
+## ├── Dimensional Reduction.Rproj
+## ├── LICENSE
+## ├── plots
+## │   ├── fig_pca_scorePlot_label.png
+## │   ├── fig_tsne_Plot_label.png
+## │   └── fig_umap_Plot_label.png
+## ├── README.md
+## ├── renv
+## │   ├── activate.R
+## │   ├── library
+## │   │   └── windows
+## │   ├── settings.json
+## │   └── staging
+## ├── renv.lock
+## └── scripts
+##     ├── 01_shiny_app_for_dimensional_reduction.R
+##     ├── 02_Dimensional_Reduction.html
+##     ├── 02_Dimensional_Reduction.md
+##     ├── 02_Dimensional_Reduction.Rmd
+##     ├── 02_Dimensional_Reduction_files
+##     │   └── figure-markdown_strict
+##     ├── 03_Dimensional_Reduction.R
+##     └── README.md
+```
+
+4.  Keep the data at `data/sample_data.csv`, the data must contain `sample`, `label` columns along with the numeric variables. Below is an example,
+
+| sample  | label  | Protein 1 | Protein 2 | …   | Protein 9 | Protein 10 |
+|:--------|:-------|----------:|----------:|:----|----------:|-----------:|
+| Sample1 | Label1 |        29 |        12 | …   |        19 |         10 |
+| Sample2 | Label2 |        30 |        26 | …   |        21 |         29 |
+| Sample3 | Label3 |        15 |        18 | …   |        16 |         27 |
+
+5.  The codes are at `scripts/02_Dimensional_Reduction.Rmd`, run it,
+
+6.  The plots will appear at `plots/`.
 
 ## Libraries
 
@@ -251,7 +326,7 @@ for (label in colnames(labels)) {
 fig_pca_scorePlot_label / scree_plot
 ```
 
-<img src="02_Dimensional_Reduction_files/figure-markdown_strict/unnamed-chunk-11-1.png" style="display: block; margin: auto;"/>
+<img src="02_Dimensional_Reduction_files/figure-markdown_strict/unnamed-chunk-13-1.png" style="display: block; margin: auto;"/>
 
 ### t-distributed Stochastic Neighbor Embedding (t-SNE)
 
@@ -309,7 +384,7 @@ for (label in colnames(labels)) {
 fig_tsne_Plot_label
 ```
 
-<img src="02_Dimensional_Reduction_files/figure-markdown_strict/unnamed-chunk-16-1.png" style="display: block; margin: auto;"/>
+<img src="02_Dimensional_Reduction_files/figure-markdown_strict/unnamed-chunk-18-1.png" style="display: block; margin: auto;"/>
 
 ### Uniform Manifold Approximation and Projection (UMAP)
 
@@ -361,7 +436,7 @@ for (label in colnames(labels)) {
 fig_umap_Plot_label
 ```
 
-<img src="02_Dimensional_Reduction_files/figure-markdown_strict/unnamed-chunk-20-1.png" style="display: block; margin: auto;"/>
+<img src="02_Dimensional_Reduction_files/figure-markdown_strict/unnamed-chunk-22-1.png" style="display: block; margin: auto;"/>
 
 ### Save all the plots
 
