@@ -1,0 +1,296 @@
+---
+title: "Dimensional Reduction in R"
+author: "Sudipta Hazra"
+date: "`r Sys.Date()`"
+mainfont: Times New Roman
+output:
+  md_document
+#   html_document:
+#     toc: true
+#     toc_float: true
+#     # number_section: true
+# always_allow_html: yes
+---
+
+```{r setup}
+proj = rprojroot::find_rstudio_root_file()
+knitr:: opts_knit$set(root.dir = proj)
+
+knitr::opts_chunk$set(
+	# echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	warning = FALSE,
+	# cache = TRUE,
+	dpi = 600
+)
+```
+
+## Introduction
+
+## Libraries
+
+Libraries need to run the function are,
+
+```{r}
+# pacman is a wrapper function, it checkcs if a package is already installed then use library(), if doesn't exist then uses install.packages()
+# install.packages("pacman")
+
+# basic libraries
+pacman::p_load(tidyverse, 
+               ggplot2, 
+               patchwork,
+               plotly, # for interactive plotting
+               glue,
+               tsne, # for tsne
+               umap, # for umap
+               tidylog
+               )
+
+#for PCA
+# basic stat package and ggplot is enough.
+```
+
+## Importing Data
+
+```{r}
+# importing data
+sample_data  <- read.csv("data/sample_data.csv")
+
+# separating numeric data
+df <-  sample_data %>% 
+  select(-"label")%>% 
+  column_to_rownames("sample") 
+
+# separating label (character/factor) data
+labels <- sample_data %>% 
+  select(c("sample", "label"))%>% 
+  column_to_rownames("sample")
+```
+
+## General Functions
+
+1.  General plot function to plot the PCA, t-SNE and UMAP result.
+
+```{r}
+
+#general Dimension reduction Plot (for PCA, t-SNE, UMAP a general scatter plot function)
+
+generate_dimension_reduction_plot <- function(model, x, y, model_output_data, label, labels, explained_variance = NULL) {
+  
+  # pca data and corresponding "sample" name
+  model_output_data <- model_output_data  %>%
+    rownames_to_column("sample")
+  
+  # group label and corresponding "sample" name
+  # label <- "Feeding_Regime"
+  group_names <- labels %>% 
+    select(all_of(label))%>% 
+    rownames_to_column("sample")
+  
+  colnames(group_names)[2] <- "group" 
+  
+  # joining pca data and group label by "sample"
+  model_output_data <- model_output_data %>% 
+    full_join(group_names, by = "sample") %>% 
+    column_to_rownames("sample")
+  
+  
+  print(model_output_data)
+  
+  p <-
+    ggplot(model_output_data,
+           aes(x = model_output_data[, x], y = model_output_data[, y], color = group)) +
+    geom_point(size = 4, alpha = 5 / 10) +  # Marker size
+    geom_hline(yintercept = 0, linetype="dashed", alpha = 3/10) +
+    geom_vline(xintercept = 0, linetype="dashed", alpha = 3/10) +
+    geom_polygon(stat = "ellipse",
+                 aes(fill = group),
+                 alpha = 0.01) +
+    theme_bw(base_family = "serif")
+  
+  if (tolower(model) == "pca") {
+    p <- p +
+      labs(
+        x = glue("Principal Component {x} ({explained_variance[x]}%)"),
+        y = glue("Principal Component {y} ({explained_variance[y]}%)")
+      )
+    
+  } else if (tolower(model) == "tsne"){
+    p <- p  +
+      labs(
+        x = glue("tSNE {x}"),
+        y = glue("tSNE {y}")
+      )
+  } else if (tolower(model) == "umap"){
+    p <- p  +
+      labs(
+        x = glue("UMAP {x}"),
+        y = glue("UMAP {y}")
+      )
+  } else{
+    p <- p  +
+      labs(
+        x = glue("Component {x}"),
+        y = glue("Component {y}")
+      )
+  }
+  
+  return(p)
+}
+```
+
+2.  Function for plotting the PCA scree plot.
+
+```{r}
+generate_pca_scree_plot <- function(scree_plot_data, n){
+  scree_plot <- ggplot(scree_plot_data[1:n,], mapping = aes(x = reorder(PC_component, explained_variance), y = explained_variance)) +
+    geom_bar(stat = "identity", fill="#56B4E9", colour="black") +
+    geom_line(aes(x = 1:n, y = explained_variance), linewidth = 1) +
+    geom_text(aes(label = round(explained_variance, 2)), vjust = -0.5, size = 3)+
+    labs(x = "Principal Componenets",
+         y = "Explained Variance (%)") +
+    theme_bw(base_family = "serif")
+  return(scree_plot)
+}
+
+```
+
+## Dimensionaity Reduction
+
+### Principal Component Analysis (PCA)
+
+#### Defining the PCs to plot
+
+```{r}
+x = 1 # PC1
+y = 2 # PC2
+model = "pca"
+```
+
+#### Model building
+
+```{r}
+pca_model <- prcomp(df, scale. = TRUE)
+```
+
+#### Extracting the PCA results
+
+```{r}
+pca_data <- as.data.frame(pca_model$x)
+```
+
+#### Calculating explained variance
+
+```{r}
+explained_variance <- pca_model$sdev^2 / sum(pca_model$sdev^2)
+explained_variance <- round(explained_variance * 100, 2)
+```
+
+#### Preparing Scree plot
+
+```{r}
+scree_plot_data <- data.frame(PC_component = paste0('PC ', 1: nrow(sample_data)), explained_variance = cumsum(explained_variance))
+components_to_show = 10
+
+scree_plot <- generate_pca_scree_plot(scree_plot_data, components_to_show)
+```
+
+#### Preparig Score plot
+
+```{r}
+for (label in colnames(labels)) {
+  assign(paste0("fig_pca_scorePlot_", label), generate_dimension_reduction_plot("pca",x, y, pca_data, label, labels, explained_variance = explained_variance))
+}
+```
+
+#### Plotting Score Plot and Scree Plot side by side
+
+```{r}
+fig_pca_scorePlot_label / scree_plot
+```
+
+### t-distributed Stochastic Neighbor Embedding (t-SNE)
+
+#### Defining the parameters to plot
+
+```{r}
+x = 1
+y = 2 
+perplexity = 20
+model = "tsne"
+```
+
+#### Model building
+
+```{r}
+set.seed(0)
+tsne_model <- tsne(df, initial_dims = 2)
+```
+
+#### Extracting the t-SNE results
+
+```{r}
+tsne_data <- data.frame(tsne_model)
+rownames(tsne_data) <- rownames(df)
+```
+
+#### Preparing t-SNE plots
+
+```{r}
+for (label in colnames(labels)) {
+  assign(paste0("fig_tsne_Plot_", label), generate_dimension_reduction_plot(model, x, y, tsne_data, label, labels, explained_variance = NULL))
+}
+```
+
+#### Plotting t-SNE plots
+
+```{r}
+fig_tsne_Plot_label
+```
+
+### Uniform Manifold Approximation and Projection (UMAP)
+
+#### Defining parameters to plot
+
+```{r}
+x = 1
+y = 2 
+model = "umap"
+```
+
+#### Model building
+
+```{r}
+set.seed(0)
+umap_model <- umap(df, n_components = 2, random_state = 15)
+```
+
+#### Extracting UMAP results
+
+```{r}
+umap_data <- data.frame(umap_model[["layout"]]) 
+```
+
+#### Preparing UMAP plots
+
+```{r}
+for (label in colnames(labels)) {
+  assign(paste0("fig_umap_Plot_", label), generate_dimension_reduction_plot(model, x, y, umap_data, label, labels, explained_variance = NULL))
+}
+
+fig_umap_Plot_label
+```
+
+### Save all the plots
+
+```{r}
+items <- ls()
+
+for (item in items){
+  # print(item)
+  if(grepl("fig", item)){
+    ggsave(get(item), file = glue("plots/{item}.png"), dpi = 600)
+  }
+}
+```
